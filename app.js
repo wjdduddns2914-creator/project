@@ -1,70 +1,415 @@
-"use strict";
+function renderAIResult(result) {
 
-/*
- * AI.SW 부천연합해커톤 오후 프로젝트 스타터
- *
- * 이 파일의 예시 기능은 실행 환경 확인용입니다.
- * 프로젝트 기획이 승인되면 팀의 핵심 기능으로 교체하세요.
- *
- * 작업 원칙:
- * 1. 한 번에 기능 하나만 구현합니다.
- * 2. AI가 수정한 내용을 두 팀원이 함께 확인합니다.
- * 3. 실행하고 테스트한 뒤 커밋합니다.
- * 4. 개인정보나 API 키를 코드에 입력하지 않습니다.
- */
+  const container =
+    document.getElementById(
+      "aiResult"
+    );
 
-const startButton = document.querySelector("#start-button");
-const resetButton = document.querySelector("#reset-button");
-const resultBox = document.querySelector("#result");
-const appStatus = document.querySelector("#app-status");
 
-function showRunningMessage() {
-  resultBox.textContent =
-    "✅ 앱이 정상적으로 실행되고 있습니다. 이제 이 예시 기능을 우리 팀의 핵심 기능으로 교체하세요.";
+  const partsHTML =
+    (result.parts || [])
+      .map(
+        part => {
 
-  resultBox.classList.add("is-success");
+          const owned =
+            part.status ===
+            "보유";
 
-  appStatus.textContent = "실행 확인 완료";
-  appStatus.classList.add("is-running");
+
+          return `
+
+            <div class="ai-part">
+
+              <div
+                class="ai-part-header"
+              >
+
+                <span
+                  class="ai-part-name"
+                >
+
+                  ${escapeHTML(
+                    part.name
+                  )}
+
+                  ×
+
+                  ${part.quantity}
+
+                </span>
+
+
+                <span
+                  class="${
+                    owned
+                      ? "owned"
+                      : "need"
+                  }"
+                >
+
+                  ${
+                    owned
+                      ? "✓ 보유"
+                      : "구매 필요"
+                  }
+
+                </span>
+
+              </div>
+
+
+              <p>
+
+                ${escapeHTML(
+                  part.reason
+                )}
+
+              </p>
+
+
+              ${
+                part.estimatedPrice
+                  ? `
+
+                    <small>
+
+                      개당 예상 가격:
+                      ${Number(
+                        part.estimatedPrice
+                      ).toLocaleString()}원
+
+                    </small>
+
+                  `
+                  : ""
+              }
+
+            </div>
+
+          `;
+
+        }
+      )
+      .join("");
+
+
+  const functionsHTML =
+    (result.detectedFunctions || [])
+      .map(
+        item =>
+          `<li>${escapeHTML(
+            item
+          )}</li>`
+      )
+      .join("");
+
+
+  const operationHTML =
+    (result.operation || [])
+      .map(
+        item =>
+          `<li>${escapeHTML(
+            item
+          )}</li>`
+      )
+      .join("");
+
+
+  const tipsHTML =
+    (result.developmentTips || [])
+      .map(
+        item =>
+          `<li>${escapeHTML(
+            item
+          )}</li>`
+      )
+      .join("");
+
+
+  const connectionsHTML =
+    (result.connections || [])
+      .map(
+        connection => `
+
+          <div class="connection">
+
+            <strong>
+
+              ${escapeHTML(
+                connection.from
+              )}
+
+              →
+
+              ${escapeHTML(
+                connection.to
+              )}
+
+            </strong>
+
+            <br>
+
+            ${escapeHTML(
+              connection.description
+            )}
+
+          </div>
+
+        `
+      )
+      .join("");
+
+
+  container.innerHTML = `
+
+    <h2>
+
+      ${escapeHTML(
+        result.deviceName ||
+        "AI 설계 결과"
+      )}
+
+    </h2>
+
+
+    <span class="difficulty">
+
+      난이도:
+      ${escapeHTML(
+        result.difficulty
+      )}
+
+    </span>
+
+
+    <div class="ai-summary">
+
+      ${escapeHTML(
+        result.summary
+      )}
+
+    </div>
+
+
+    <div class="ai-cost">
+
+      예상 추가 구매 비용:
+
+      ${Number(
+        result.estimatedCost
+      ).toLocaleString()}원
+
+    </div>
+
+
+    <div class="ai-section">
+
+      <h4>
+        🔍 분석된 기능
+      </h4>
+
+      <ul class="ai-list">
+
+        ${functionsHTML}
+
+      </ul>
+
+    </div>
+
+
+    <div class="ai-section">
+
+      <h4>
+        🔧 필요한 부품
+      </h4>
+
+      ${partsHTML}
+
+    </div>
+
+
+    ${
+      connectionsHTML
+        ? `
+
+          <div class="ai-section">
+
+            <h4>
+              🔌 주요 연결 구조
+            </h4>
+
+            ${connectionsHTML}
+
+          </div>
+
+        `
+        : ""
+    }
+
+
+    <div class="ai-section">
+
+      <h4>
+        ⚙️ 작동 과정
+      </h4>
+
+      <ol class="ai-list">
+
+        ${operationHTML}
+
+      </ol>
+
+    </div>
+
+
+    <div class="ai-section">
+
+      <h4>
+        💡 제작 팁
+      </h4>
+
+      <ul class="ai-list">
+
+        ${tipsHTML}
+
+      </ul>
+
+    </div>
+
+
+    <div class="ai-section">
+
+      <small>
+
+        자체 분석 신뢰도:
+        ${result.confidence}%
+
+      </small>
+
+    </div>
+
+  `;
+
 }
+async function requestAIDesign() {
 
-function resetDemo() {
-  resultBox.textContent =
-    "버튼을 누르면 결과가 이곳에 표시됩니다.";
+  const device =
+    document.getElementById("aiDevice").value;
 
-  resultBox.classList.remove("is-success");
+  const purpose =
+    document.getElementById("aiPurpose").value;
 
-  appStatus.textContent = "시작 준비";
-  appStatus.classList.remove("is-running");
+  const functions =
+    document.getElementById("aiFunctions").value;
+
+  const budget =
+    document.getElementById("aiBudget").value;
+
+  const ownedParts =
+    document.getElementById("aiOwnedParts").value;
+
+
+  if (!device && !purpose && !functions) {
+
+    alert("만들고 싶은 기기나 기능을 입력해주세요.");
+
+    return;
+  }
+
+
+  const loading =
+    document.getElementById("aiLoading");
+
+  const result =
+    document.getElementById("aiResult");
+
+
+  loading.style.display = "block";
+
+  result.innerHTML = "";
+
+
+  try {
+
+    const response =
+      await fetch("/api/ai-design", {
+
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+
+          device,
+          purpose,
+          functions,
+          budget,
+
+          ownedParts:
+            ownedParts
+              .split(",")
+              .map(item => item.trim())
+              .filter(Boolean)
+
+        })
+
+      });
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        data.error ||
+        "분석에 실패했습니다."
+      );
+
+    }
+
+
+    renderAIResult(data);
+
+
+  } catch (error) {
+
+    console.error(error);
+
+    result.innerHTML = `
+
+      <div class="error">
+
+        ❌ 오류가 발생했습니다.
+
+        <br><br>
+
+        ${escapeHTML(
+          error.message
+        )}
+
+      </div>
+
+    `;
+
+  } finally {
+
+    loading.style.display = "none";
+
+  }
+
 }
+function escapeHTML(text) {
 
-startButton.addEventListener("click", showRunningMessage);
-resetButton.addEventListener("click", resetDemo);
+  const div =
+    document.createElement("div");
 
-/*
- * TODO: 아래 순서로 팀 프로젝트를 구현하세요.
- *
- * 1. PROJECT_PLAN.md에 핵심 기능과 완료 기준을 작성합니다.
- * 2. index.html의 시연 영역을 프로젝트에 맞게 수정합니다.
- * 3. 사용자의 입력을 가져옵니다.
- * 4. 규칙 또는 데이터에 따라 결과를 계산합니다.
- * 5. 계산 결과와 판단 이유를 화면에 표시합니다.
- * 6. 정상 입력, 잘못된 입력, 경계값을 테스트합니다.
- * 7. TEST_CHECKLIST.md와 AI_LOG.md를 작성합니다.
- *
- * 규칙 기반 AI 예시:
- *
- * function makeRecommendation(score) {
- *   if (score >= 80) {
- *     return {
- *       result: "추천",
- *       reason: "안전 기준을 충분히 통과했습니다."
- *     };
- *   }
- *
- *   return {
- *     result: "다시 확인",
- *     reason: "사용자가 직접 검토할 항목이 남아 있습니다."
- *   };
- * }
- */
+  div.textContent =
+    text ?? "";
+
+  return div.innerHTML;
+
+}

@@ -1,12 +1,13 @@
 {
-  "name": "bucheon-ai-hackathon-starter",
-  "version": "1.0.0",
-  "private": true,
-  "description": "AI.SW 부천연합해커톤 오후 팀 프로젝트용 정적 웹 스타터",
+  "name": "makermatch",
+  "version": "2.0.0",
+  "description": "AI 기반 전자·기계 부품 추천 플랫폼",
+  "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
-  "engines": {
-    "node": ">=18"
+  "dependencies": {
+    "express": "^4.21.2"
   }
 }

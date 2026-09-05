@@ -1,100 +1,430 @@
-const http = require("http");
-const fs = require("fs");
+const express = require("express");
 const path = require("path");
 
-const PORT = Number(process.env.PORT) || 3000;
-const HOST = "0.0.0.0";
-const PUBLIC_DIRECTORY = __dirname;
+const {
+  parts,
+  projects,
+  stores
+} = require("./data");
 
-const MIME_TYPES = {
-  ".html": "text/html; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".ico": "image/x-icon",
-  ".txt": "text/plain; charset=utf-8",
-};
+const {
+  recommendDevice
+} = require("./recommendation");
 
-function sendResponse(response, statusCode, contentType, body) {
-  response.writeHead(statusCode, {
-    "Content-Type": contentType,
-    "Cache-Control": "no-cache",
-  });
-  response.end(body);
-}
 
-function getSafeFilePath(requestUrl) {
-  const url = new URL(requestUrl, `http://${HOST}:${PORT}`);
-  const requestedPath = decodeURIComponent(url.pathname);
-  const normalizedPath = path.normalize(requestedPath).replace(/^(\.\.[/\\])+/, "");
-  const relativePath =
-    normalizedPath === "/" || normalizedPath === "."
-      ? "index.html"
-      : normalizedPath.replace(/^[/\\]+/, "");
+const app = express();
 
-  const filePath = path.resolve(PUBLIC_DIRECTORY, relativePath);
-  const relativeToPublic = path.relative(PUBLIC_DIRECTORY, filePath);
+const PORT =
+  process.env.PORT || 3000;
 
-  if (
-    relativeToPublic.startsWith("..") ||
-    path.isAbsolute(relativeToPublic) ||
-    relativePath.startsWith(".")
-  ) {
-    return null;
+
+app.use(
+  express.json()
+);
+
+
+app.use(
+  express.static(
+    path.join(
+      __dirname,
+      "public"
+    )
+  )
+);
+
+
+// =====================================================
+// 부품
+// =====================================================
+
+app.get(
+  "/api/parts",
+  (req, res) => {
+
+    res.json(parts);
+
   }
+);
 
-  return filePath;
-}
 
-const server = http.createServer((request, response) => {
-  const filePath = getSafeFilePath(request.url);
+// =====================================================
+// 프로젝트
+// =====================================================
 
-  if (!filePath) {
-    sendResponse(response, 403, "text/plain; charset=utf-8", "403 Forbidden");
-    return;
+app.get(
+  "/api/projects",
+  (req, res) => {
+
+    res.json(projects);
+
   }
+);
 
-  fs.stat(filePath, (statError, stats) => {
-    if (statError || !stats.isFile()) {
-      sendResponse(
-        response,
-        404,
-        "text/plain; charset=utf-8",
-        "404 Not Found"
+
+// =====================================================
+// 프로젝트 상세
+// =====================================================
+
+app.get(
+  "/api/projects/:id",
+  (req, res) => {
+
+    const project =
+      projects.find(
+        p =>
+          p.id ===
+          req.params.id
       );
-      return;
+
+
+    if (!project) {
+
+      return res
+        .status(404)
+        .json({
+          error:
+            "프로젝트를 찾을 수 없습니다."
+        });
+
     }
 
-    const extension = path.extname(filePath).toLowerCase();
-    const contentType =
-      MIME_TYPES[extension] || "application/octet-stream";
 
-    fs.readFile(filePath, (readError, content) => {
-      if (readError) {
-        sendResponse(
-          response,
-          500,
-          "text/plain; charset=utf-8",
-          "500 Internal Server Error"
+    const required =
+      project.requiredParts.map(
+        item => {
+
+          const part =
+            parts.find(
+              p =>
+                p.id ===
+                item.id
+            );
+
+
+          return {
+
+            ...part,
+
+            quantity:
+              item.quantity,
+
+            totalPrice:
+              part.price *
+              item.quantity
+
+          };
+
+        }
+      );
+
+
+    const totalCost =
+      required.reduce(
+        (
+          sum,
+          part
+        ) =>
+          sum +
+          part.totalPrice,
+
+        0
+      );
+
+
+    res.json({
+
+      ...project,
+
+      required,
+
+      totalCost
+
+    });
+
+  }
+);
+
+
+// =====================================================
+// 호환성 검사
+// =====================================================
+
+app.post(
+  "/api/compatibility",
+  (req, res) => {
+
+    const {
+      partAId,
+      partBId
+    } = req.body;
+
+
+    const partA =
+      parts.find(
+        p =>
+          p.id ===
+          partAId
+      );
+
+
+    const partB =
+      parts.find(
+        p =>
+          p.id ===
+          partBId
+      );
+
+
+    if (
+      !partA ||
+      !partB
+    ) {
+
+      return res
+        .status(404)
+        .json({
+          error:
+            "부품을 찾을 수 없습니다."
+        });
+
+    }
+
+
+    const warnings = [];
+
+    const checks = [];
+
+
+    // 전압
+    if (
+      partA.voltageMin !== null &&
+      partB.voltageMin !== null
+    ) {
+
+      const overlap =
+        Math.max(
+          partA.voltageMin,
+          partB.voltageMin
+        ) <=
+        Math.min(
+          partA.voltageMax,
+          partB.voltageMax
         );
-        return;
+
+
+      checks.push({
+
+        category:
+          "전압",
+
+        result:
+          overlap
+            ? "PASS"
+            : "FAIL"
+
+      });
+
+
+      if (!overlap) {
+
+        warnings.push(
+          "두 부품의 전압 범위를 확인해야 합니다."
+        );
+
       }
 
-      sendResponse(response, 200, contentType, content);
-    });
-  });
-});
+    }
 
-server.listen(PORT, HOST, () => {
-  console.log("");
-  console.log("==============================================");
-  console.log(" AI.SW 부천연합해커톤 프로젝트 서버");
-  console.log(` http://localhost:${PORT}`);
-  console.log("==============================================");
-  console.log("");
-});
+
+    // 인터페이스
+    const interfaceMatch =
+      partA.interface.some(
+        value =>
+          partB.interface.includes(
+            value
+          )
+      );
+
+
+    checks.push({
+
+      category:
+        "인터페이스",
+
+      result:
+        interfaceMatch
+          ? "PASS"
+          : "CHECK"
+
+    });
+
+
+    if (
+      !interfaceMatch
+    ) {
+
+      warnings.push(
+        "직접 연결 가능한 공통 인터페이스가 없습니다."
+      );
+
+    }
+
+
+    const compatible =
+      !checks.some(
+        check =>
+          check.result ===
+          "FAIL"
+      );
+
+
+    res.json({
+
+      compatible,
+
+      partA:
+        partA.name,
+
+      partB:
+        partB.name,
+
+      checks,
+
+      warnings
+
+    });
+
+  }
+);
+
+
+// =====================================================
+// 구매처
+// =====================================================
+
+app.get(
+  "/api/buy/:partId",
+  (req, res) => {
+
+    const part =
+      parts.find(
+        p =>
+          p.id ===
+          req.params.partId
+      );
+
+
+    if (!part) {
+
+      return res
+        .status(404)
+        .json({
+          error:
+            "부품을 찾을 수 없습니다."
+        });
+
+    }
+
+
+    const results =
+      stores.map(
+        store => ({
+
+          store:
+            store.name,
+
+          product:
+            part.name,
+
+          price:
+            part.price,
+
+          searchUrl:
+            store.searchUrl +
+            encodeURIComponent(
+              part.name
+            )
+
+        })
+      );
+
+
+    res.json({
+
+      part:
+        part.name,
+
+      estimatedPrice:
+        part.price,
+
+      stores:
+        results
+
+    });
+
+  }
+);
+
+
+// =====================================================
+// ⭐ 자체 AI 설계 엔진
+// =====================================================
+
+app.post(
+  "/api/ai-design",
+  (req, res) => {
+
+    try {
+
+      const result =
+        recommendDevice(
+          req.body
+        );
+
+
+      res.json(result);
+
+    } catch (error) {
+
+      console.error(
+        "추천 엔진 오류:",
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+
+          error:
+            "기기 분석 중 오류가 발생했습니다.",
+
+          details:
+            error.message
+
+        });
+
+    }
+
+  }
+);
+
+
+// =====================================================
+// 서버
+// =====================================================
+
+app.listen(
+  PORT,
+  () => {
+
+    console.log(
+      `MakerMatch server running on port ${PORT}`
+    );
+
+    console.log(
+      "Local AI recommendation engine enabled"
+    );
+
+  }
+);

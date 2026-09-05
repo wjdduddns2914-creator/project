@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MakerMatch</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<header>
+  <div class="logo">MakerMatch</div>
+  <nav>
+    <button onclick="scrollToSection('projects')">프로젝트</button>
+    <button onclick="scrollToSection('compatibility')">호환성 검사</button>
+    <button onclick="scrollToSection('parts')">부품</button>
+  </nav>
+</header>
+
+<section class="hero">
+  <h1>공학 프로젝트를<br>더 쉽게 시작하세요.</h1>
+  <p>
+    MakerMatch는 보유하고 있는 전자·기계 부품을 분석하여 제작 가능한 프로젝트를 추천하고,
+    부품의 전기적·기계적 호환성을 검사하며, 필요한 부품의 구매처까지 연결해주는
+    공학 프로젝트 지원 플랫폼입니다.
+  </p>
+  <button class="primary" onclick="scrollToSection('projects')">프로젝트 시작하기</button>
+</section>
+
+<div class="container">
+  <h2 class="section-title" id="projects">프로젝트 선택</h2>
+  <div id="projectList" class="grid"></div>
+
+  <h2 class="section-title">프로젝트 부품</h2>
+  <div class="card">
+    <select id="projectSelect" onchange="loadProject()">
+      <option value="">프로젝트를 선택하세요</option>
+    </select>
+    <div id="projectParts"></div>
+  </div>
+
+  <h2 class="section-title" id="compatibility">부품 호환성 검사</h2>
+  <div class="card">
+    <label>첫 번째 부품</label>
+    <select id="partA"></select>
+
+    <label>두 번째 부품</label>
+    <select id="partB"></select>
+
+    <button class="primary" onclick="checkCompatibility()">호환성 검사</button>
+    <div id="compatibilityResult"></div>
+  </div>
+
+  <h2 class="section-title" id="parts">부품 구매</h2>
+  <div class="card">
+    <select id="buyPart"></select>
+    <button class="primary" onclick="buyPart()">판매처 확인</button>
+    <div id="buyResult"></div>
+  </div>
+
+  <h2 class="section-title">SDGs와 MakerMatch</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>SDG 9</h3>
+      <p>
+        산업과 기술 혁신을 지원합니다.
+        전자·기계 부품의 정보를 체계적으로 관리하고 공학 프로젝트 설계를 지원합니다.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>SDG 12</h3>
+      <p>
+        사용자가 이미 가지고 있는 부품을 먼저 활용하도록 하여
+        불필요한 부품 구매와 전자폐기물 발생을 줄이는 것을 목표로 합니다.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>경제적 가치</h3>
+      <p>
+        필요한 부품만 구매하고, 판매처 정보를 제공하여 프로젝트 제작 비용과
+        탐색 시간을 줄일 수 있습니다.
+      </p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  MakerMatch<br>
+  Engineering Parts & Project Platform
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
