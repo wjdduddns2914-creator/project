@@ -1,7 +1,7 @@
 {
   "name": "makermatch",
-  "version": "2.0.0",
-  "description": "AI 기반 전자·기계 부품 추천 플랫폼",
+  "version": "1.0.0",
+  "description": "전자/기계 부품 호환성 검사 및 프로젝트 추천 웹앱",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

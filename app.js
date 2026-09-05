@@ -1,415 +1,491 @@
-function renderAIResult(result) {
+let allParts = [];
+let allProjects = [];
+
+
+// ========================================
+// 데이터 로딩
+// ========================================
+
+async function loadData() {
+
+  try {
+
+    const partsResponse =
+      await fetch("/api/parts");
+
+    allParts =
+      await partsResponse.json();
+
+
+    const projectResponse =
+      await fetch("/api/projects");
+
+    allProjects =
+      await projectResponse.json();
+
+
+    renderProjects();
+
+    renderSelects();
+
+  } catch (error) {
+
+    console.error(
+      "데이터 로딩 오류:",
+      error
+    );
+
+  }
+
+}
+
+
+// ========================================
+// 프로젝트 표시
+// ========================================
+
+function renderProjects() {
 
   const container =
     document.getElementById(
-      "aiResult"
+      "projectList"
+    );
+
+  container.innerHTML = "";
+
+
+  allProjects.forEach(project => {
+
+    const card =
+      document.createElement("div");
+
+    card.className = "card";
+
+
+    card.innerHTML = `
+
+      <h3>
+        ${project.name}
+      </h3>
+
+      <p>
+        ${project.description}
+      </p>
+
+      <p>
+        <strong>
+          ${project.sdgs.join(" · ")}
+        </strong>
+      </p>
+
+      <button
+        class="primary"
+        onclick="selectProject('${project.id}')"
+      >
+        프로젝트 선택
+      </button>
+
+    `;
+
+
+    container.appendChild(card);
+
+  });
+
+}
+
+
+// ========================================
+// SELECT 생성
+// ========================================
+
+function renderSelects() {
+
+  const projectSelect =
+    document.getElementById(
+      "projectSelect"
     );
 
 
-  const partsHTML =
-    (result.parts || [])
-      .map(
-        part => {
+  allProjects.forEach(project => {
 
-          const owned =
-            part.status ===
-            "보유";
+    const option =
+      document.createElement("option");
 
+    option.value =
+      project.id;
 
-          return `
+    option.textContent =
+      project.name;
 
-            <div class="ai-part">
+    projectSelect.appendChild(
+      option
+    );
 
-              <div
-                class="ai-part-header"
-              >
-
-                <span
-                  class="ai-part-name"
-                >
-
-                  ${escapeHTML(
-                    part.name
-                  )}
-
-                  ×
-
-                  ${part.quantity}
-
-                </span>
+  });
 
 
-                <span
-                  class="${
-                    owned
-                      ? "owned"
-                      : "need"
-                  }"
-                >
-
-                  ${
-                    owned
-                      ? "✓ 보유"
-                      : "구매 필요"
-                  }
-
-                </span>
-
-              </div>
+  const selects = [
+    "partA",
+    "partB",
+    "buyPart"
+  ];
 
 
-              <p>
+  selects.forEach(selectId => {
 
-                ${escapeHTML(
-                  part.reason
-                )}
-
-              </p>
-
-
-              ${
-                part.estimatedPrice
-                  ? `
-
-                    <small>
-
-                      개당 예상 가격:
-                      ${Number(
-                        part.estimatedPrice
-                      ).toLocaleString()}원
-
-                    </small>
-
-                  `
-                  : ""
-              }
-
-            </div>
-
-          `;
-
-        }
-      )
-      .join("");
+    const select =
+      document.getElementById(
+        selectId
+      );
 
 
-  const functionsHTML =
-    (result.detectedFunctions || [])
-      .map(
-        item =>
-          `<li>${escapeHTML(
-            item
-          )}</li>`
-      )
-      .join("");
+    allParts.forEach(part => {
+
+      const option =
+        document.createElement(
+          "option"
+        );
+
+      option.value =
+        part.id;
+
+      option.textContent =
+        `${part.name} — ${part.price.toLocaleString()}원`;
+
+      select.appendChild(
+        option
+      );
+
+    });
+
+  });
+
+}
 
 
-  const operationHTML =
-    (result.operation || [])
-      .map(
-        item =>
-          `<li>${escapeHTML(
-            item
-          )}</li>`
-      )
-      .join("");
+// ========================================
+// 프로젝트 선택
+// ========================================
+
+function selectProject(id) {
+
+  document.getElementById(
+    "projectSelect"
+  ).value = id;
 
 
-  const tipsHTML =
-    (result.developmentTips || [])
-      .map(
-        item =>
-          `<li>${escapeHTML(
-            item
-          )}</li>`
-      )
-      .join("");
+  loadProject();
 
 
-  const connectionsHTML =
-    (result.connections || [])
-      .map(
-        connection => `
+  scrollToSection(
+    "projects"
+  );
 
-          <div class="connection">
+}
 
-            <strong>
 
-              ${escapeHTML(
-                connection.from
-              )}
+// ========================================
+// 프로젝트 부품
+// ========================================
 
-              →
+async function loadProject() {
 
-              ${escapeHTML(
-                connection.to
-              )}
+  const id =
+    document.getElementById(
+      "projectSelect"
+    ).value;
 
-            </strong>
 
-            <br>
+  if (!id) return;
 
-            ${escapeHTML(
-              connection.description
-            )}
 
-          </div>
+  const response =
+    await fetch(
+      `/api/projects/${id}`
+    );
 
-        `
-      )
-      .join("");
+
+  const project =
+    await response.json();
+
+
+  const container =
+    document.getElementById(
+      "projectParts"
+    );
 
 
   container.innerHTML = `
 
-    <h2>
+    <h3>
+      ${project.name}
+    </h3>
 
-      ${escapeHTML(
-        result.deviceName ||
-        "AI 설계 결과"
-      )}
+    <p>
+      예상 전체 부품 비용:
 
-    </h2>
+      <strong>
+        ${project.totalCost.toLocaleString()}원
+      </strong>
+    </p>
 
-
-    <span class="difficulty">
-
-      난이도:
-      ${escapeHTML(
-        result.difficulty
-      )}
-
-    </span>
+  `;
 
 
-    <div class="ai-summary">
+  project.required.forEach(part => {
 
-      ${escapeHTML(
-        result.summary
-      )}
+    const div =
+      document.createElement(
+        "div"
+      );
 
-    </div>
-
-
-    <div class="ai-cost">
-
-      예상 추가 구매 비용:
-
-      ${Number(
-        result.estimatedCost
-      ).toLocaleString()}원
-
-    </div>
+    div.className =
+      "part";
 
 
-    <div class="ai-section">
+    div.innerHTML = `
 
-      <h4>
-        🔍 분석된 기능
-      </h4>
+      <span>
+        ${part.name}
+        × ${part.quantity}
+      </span>
 
-      <ul class="ai-list">
+      <span class="price">
+        ${part.totalPrice.toLocaleString()}원
+      </span>
 
-        ${functionsHTML}
-
-      </ul>
-
-    </div>
-
-
-    <div class="ai-section">
-
-      <h4>
-        🔧 필요한 부품
-      </h4>
-
-      ${partsHTML}
-
-    </div>
+    `;
 
 
-    ${
-      connectionsHTML
-        ? `
+    container.appendChild(div);
 
-          <div class="ai-section">
+  });
 
-            <h4>
-              🔌 주요 연결 구조
-            </h4>
+}
 
-            ${connectionsHTML}
 
-          </div>
+// ========================================
+// 호환성 검사
+// ========================================
 
-        `
-        : ""
+async function checkCompatibility() {
+
+  const partA =
+    document.getElementById(
+      "partA"
+    ).value;
+
+
+  const partB =
+    document.getElementById(
+      "partB"
+    ).value;
+
+
+  const response =
+    await fetch(
+      "/api/compatibility",
+      {
+
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+
+          partAId: partA,
+
+          partBId: partB
+
+        })
+
+      }
+    );
+
+
+  const result =
+    await response.json();
+
+
+  const container =
+    document.getElementById(
+      "compatibilityResult"
+    );
+
+
+  let html = `
+
+    <div class="result">
+
+      <h3>
+        ${result.partA}
+        ↔
+        ${result.partB}
+      </h3>
+
+      <p
+        class="${
+          result.compatible
+            ? "good"
+            : "bad"
+        }"
+      >
+
+        ${
+          result.compatible
+            ? "🟢 호환 가능"
+            : "🔴 호환 불가"
+        }
+
+      </p>
+
+  `;
+
+
+  result.checks.forEach(check => {
+
+    html += `
+
+      <p>
+
+        <strong>
+          ${check.category}
+        </strong>
+
+        :
+
+        ${check.result}
+
+      </p>
+
+    `;
+
+  });
+
+
+  result.warnings.forEach(
+    warning => {
+
+      html += `
+
+        <p class="warning">
+
+          ⚠️
+          ${warning}
+
+        </p>
+
+      `;
+
     }
+  );
 
 
-    <div class="ai-section">
-
-      <h4>
-        ⚙️ 작동 과정
-      </h4>
-
-      <ol class="ai-list">
-
-        ${operationHTML}
-
-      </ol>
-
-    </div>
+  html += "</div>";
 
 
-    <div class="ai-section">
+  container.innerHTML =
+    html;
 
-      <h4>
-        💡 제작 팁
-      </h4>
-
-      <ul class="ai-list">
-
-        ${tipsHTML}
-
-      </ul>
-
-    </div>
+}
 
 
-    <div class="ai-section">
+// ========================================
+// 구매처
+// ========================================
 
-      <small>
+async function buyPart() {
 
-        자체 분석 신뢰도:
-        ${result.confidence}%
+  const id =
+    document.getElementById(
+      "buyPart"
+    ).value;
 
-      </small>
+
+  const response =
+    await fetch(
+      `/api/buy/${id}`
+    );
+
+
+  const result =
+    await response.json();
+
+
+  const container =
+    document.getElementById(
+      "buyResult"
+    );
+
+
+  container.innerHTML = `
+
+    <div class="result">
+
+      <h3>
+        ${result.part}
+      </h3>
+
+      <p>
+
+        예상 가격:
+
+        <strong>
+          ${result.estimatedPrice.toLocaleString()}원
+        </strong>
+
+      </p>
+
+
+      ${result.stores
+        .map(store => `
+
+          <a
+            class="store-link"
+            href="${store.searchUrl}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+
+            🛒
+            ${store.store}
+            에서 검색
+
+          </a>
+
+        `)
+        .join("")}
 
     </div>
 
   `;
 
 }
-async function requestAIDesign() {
-
-  const device =
-    document.getElementById("aiDevice").value;
-
-  const purpose =
-    document.getElementById("aiPurpose").value;
-
-  const functions =
-    document.getElementById("aiFunctions").value;
-
-  const budget =
-    document.getElementById("aiBudget").value;
-
-  const ownedParts =
-    document.getElementById("aiOwnedParts").value;
 
 
-  if (!device && !purpose && !functions) {
+// ========================================
+// 스크롤
+// ========================================
 
-    alert("만들고 싶은 기기나 기능을 입력해주세요.");
+function scrollToSection(id) {
 
-    return;
-  }
+  document
+    .getElementById(id)
+    .scrollIntoView({
 
+      behavior: "smooth"
 
-  const loading =
-    document.getElementById("aiLoading");
-
-  const result =
-    document.getElementById("aiResult");
-
-
-  loading.style.display = "block";
-
-  result.innerHTML = "";
-
-
-  try {
-
-    const response =
-      await fetch("/api/ai-design", {
-
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-
-          device,
-          purpose,
-          functions,
-          budget,
-
-          ownedParts:
-            ownedParts
-              .split(",")
-              .map(item => item.trim())
-              .filter(Boolean)
-
-        })
-
-      });
-
-
-    const data =
-      await response.json();
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        data.error ||
-        "분석에 실패했습니다."
-      );
-
-    }
-
-
-    renderAIResult(data);
-
-
-  } catch (error) {
-
-    console.error(error);
-
-    result.innerHTML = `
-
-      <div class="error">
-
-        ❌ 오류가 발생했습니다.
-
-        <br><br>
-
-        ${escapeHTML(
-          error.message
-        )}
-
-      </div>
-
-    `;
-
-  } finally {
-
-    loading.style.display = "none";
-
-  }
+    });
 
 }
-function escapeHTML(text) {
 
-  const div =
-    document.createElement("div");
 
-  div.textContent =
-    text ?? "";
+// ========================================
+// 실행
+// ========================================
 
-  return div.innerHTML;
-
-}
+loadData();
