@@ -11,6 +11,7 @@
 <header>
   <div class="logo">MakerMatch</div>
   <nav>
+    <button onclick="scrollToSection('deviceFinder')">기기 추천</button>
     <button onclick="scrollToSection('projects')">프로젝트</button>
     <button onclick="scrollToSection('compatibility')">호환성 검사</button>
     <button onclick="scrollToSection('parts')">부품</button>
@@ -28,6 +29,20 @@
 </section>
 
 <div class="container">
+  <h2 class="section-title" id="deviceFinder">수리·제작할 기기 찾기</h2>
+  <div class="card">
+    <p>수리하거나 제작하려는 기기의 이름 또는 핵심 부품을 입력하면 필요한 부품을 안내합니다.</p>
+    <label for="deviceInput">기기 이름</label>
+    <input
+      id="deviceInput"
+      type="text"
+      placeholder="예: 라인트레이서, 로봇, 환기 시스템"
+      maxlength="80"
+    >
+    <button class="primary" onclick="findDevicePlan()">필요 부품 확인</button>
+    <div id="devicePlanResult" aria-live="polite"></div>
+  </div>
+
   <h2 class="section-title" id="projects">프로젝트 선택</h2>
   <div id="projectList" class="grid"></div>
 

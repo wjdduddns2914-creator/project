@@ -12,6 +12,15 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const { parts, projects, stores } = require("./data");
 
+// 서버와 API 상태 확인
+app.get("/api/health", (req, res) => {
+  res.json({
+    ok: true,
+    service: "MakerMatch API",
+    version: "1.1.0"
+  });
+});
+
 // ================================
 // 전체 부품
 // ================================
@@ -61,6 +70,88 @@ app.get("/api/projects/:id", (req, res) => {
     ...project,
     required,
     totalCost
+  });
+});
+
+// 사용자가 입력한 기기와 가까운 제작 프로젝트 추천
+app.post("/api/device-plan", (req, res) => {
+  const device = String(req.body.device || "").trim();
+
+  if (!device) {
+    return res.status(400).json({
+      error: "수리하거나 제작하려는 기기 이름을 입력해 주세요."
+    });
+  }
+
+  const normalizedDevice = device.toLowerCase();
+  const aliases = {
+    로봇: ["라인트레이서", "장애물 회피 자동차", "소형 로봇팔"],
+    자동차: ["장애물 회피 자동차", "라인트레이서"],
+    창문: ["자동 환기 시스템"],
+    환기: ["자동 환기 시스템"],
+    센서: ["라인트레이서", "장애물 회피 자동차", "자동 환기 시스템"]
+  };
+
+  const matches = projects
+    .map(project => {
+      const projectText = [
+        project.name,
+        project.description,
+        ...project.requiredParts.map(item => {
+          const part = parts.find(p => p.id === item.id);
+          return part ? `${part.name} ${part.category} ${part.description}` : "";
+        })
+      ].join(" ").toLowerCase();
+
+      let score = projectText.includes(normalizedDevice) ? 3 : 0;
+      const relatedProjects = aliases[normalizedDevice] || [];
+
+      if (relatedProjects.includes(project.name)) {
+        score += 2;
+      }
+
+      normalizedDevice
+        .split(/\s+/)
+        .filter(Boolean)
+        .forEach(keyword => {
+          if (keyword.length > 1 && projectText.includes(keyword)) {
+            score += 1;
+          }
+        });
+
+      return { project, score };
+    })
+    .filter(result => result.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(({ project }) => {
+      const required = project.requiredParts.map(item => {
+        const part = parts.find(p => p.id === item.id);
+        return {
+          id: part.id,
+          name: part.name,
+          quantity: item.quantity,
+          price: part.price,
+          totalPrice: part.price * item.quantity,
+          reason: part.description
+        };
+      });
+
+      return {
+        projectId: project.id,
+        projectName: project.name,
+        description: project.description,
+        required,
+        totalCost: required.reduce((sum, item) => sum + item.totalPrice, 0)
+      };
+    });
+
+  res.json({
+    device,
+    matches,
+    message: matches.length
+      ? "입력한 기기와 관련된 제작 계획입니다."
+      : "등록된 데이터에서 관련 기기를 찾지 못했습니다. 다른 이름이나 핵심 부품을 입력해 보세요."
   });
 });
 
@@ -379,4 +470,16 @@ app.listen(PORT, () => {
   console.log(
     `MakerMatch server running on port ${PORT}`
   );
+});
+
+app.use((err, req, res, next) => {
+  console.error("API error:", err);
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  res.status(500).json({
+    error: "서버에서 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."
+  });
 });

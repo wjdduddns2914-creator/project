@@ -85,6 +85,17 @@ button.primary:hover {
   opacity: 0.9;
 }
 
+button.secondary {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border: 1px solid #2563eb;
+  border-radius: 9px;
+  background: white;
+  color: #2563eb;
+  cursor: pointer;
+  font-weight: 700;
+}
+
 select,
 input {
   width: 100%;
@@ -99,6 +110,10 @@ input {
   padding: 20px;
   background: #f8fafc;
   border-radius: 12px;
+}
+
+.device-plan + .device-plan {
+  margin-top: 16px;
 }
 
 .good {
